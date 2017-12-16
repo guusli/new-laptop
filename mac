@@ -112,33 +112,39 @@ brew update --force # https://github.com/Homebrew/brew/issues/1151
 brew bundle --file=- <<EOF
 tap "thoughtbot/formulae"
 tap "homebrew/services"
-tap "universal-ctags/universal-ctags"
 tap "caskroom/cask"
 
+# Apps
+cask "iterm2"
+cask "spotify"
+cask "spectacle"
+cask "atom"
+cask "alfred"
+cask "1password"
+
 # Unix
-brew "universal-ctags", args: ["HEAD"]
 brew "git"
 brew "openssl"
-brew "rcm"
-brew "reattach-to-user-namespace"
-brew "the_silver_searcher"
-brew "tmux"
 brew "vim"
 brew "watchman"
 brew "zsh"
+brew "yadm"
+brew "getantibody/tap/antibody"
+brew "diff-so-fancy"
+brew "rbenv"
+brew "nvm"
+brew "autojump"
+brew "fzf"
+brew "the_silver_searcher"
 
 # Heroku
 brew "heroku"
-brew "parity"
 
 # GitHub
 brew "hub"
 
 # Image manipulation
 brew "imagemagick"
-
-# Testing
-brew "qt@5.5" if MacOS::Xcode.installed?
 
 # Programming language prerequisites and package managers
 brew "libyaml" # should come after openssl
@@ -151,60 +157,10 @@ brew "postgres", restart_service: :changed
 brew "redis", restart_service: :changed
 EOF
 
-if brew list | grep --silent "qt@5.5"; then
-  fancy_echo "Symlink qmake binary to /usr/local/bin for Capybara Webkit..."
-  brew unlink qt@5.5
-  brew link --force qt@5.5
-fi
+curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+
 
 fancy_echo "Update heroku binary..."
 brew unlink heroku
 brew link --force heroku
-
-fancy_echo "Configuring asdf version manager..."
-if [ ! -d "$HOME/.asdf" ]; then
-  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.3.0
-  append_to_zshrc "source $HOME/.asdf/asdf.sh" 1
-fi
-
-install_asdf_plugin() {
-  local name="$1"
-  local url="$2"
-
-  if ! asdf plugin-list | grep -Fq "$name"; then
-    asdf plugin-add "$name" "$url"
-  fi
-}
-
-# shellcheck disable=SC1090
-source "$HOME/.asdf/asdf.sh"
-install_asdf_plugin "ruby" "https://github.com/asdf-vm/asdf-ruby.git"
-install_asdf_plugin "nodejs" "https://github.com/asdf-vm/asdf-nodejs.git"
-
-install_asdf_language() {
-  local language="$1"
-  local version
-  version="$(asdf list-all "$language" | tail -1)"
-
-  if ! asdf list "$language" | grep -Fq "$version"; then
-    asdf install "$language" "$version"
-    asdf global "$language" "$version"
-  fi
-}
-
-fancy_echo "Installing latest Ruby..."
-install_asdf_language "ruby"
-gem update --system
-gem_install_or_update "bundler"
-number_of_cores=$(sysctl -n hw.ncpu)
-bundle config --global jobs $((number_of_cores - 1))
-
-fancy_echo "Installing latest Node..."
-bash "$HOME/.asdf/plugins/nodejs/bin/import-release-team-keyring"
-install_asdf_language "nodejs"
-
-if [ -f "$HOME/.laptop.local" ]; then
-  fancy_echo "Running your customizations from ~/.laptop.local ..."
-  # shellcheck disable=SC1090
-  . "$HOME/.laptop.local"
-fi
